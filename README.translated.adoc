@@ -1,0 +1,103 @@
+:sectnums:
+
+= Sampler
+
+The aim of the project is to provide a working example of a generic project structure.
+
+include::docs/requirements.adoc[leveloffset= 1]
+
+== Sample services
+All services use the same API,
+running on the same port and environment.
+
+=== REST service
+`sample/sample-rest-service`
+
+This is a simple basic REST implementation.
+It uses only unconditional technologies.
+Each additional sample service is in fact an extension of this.
+
+=== JPA service
+`sample/sample-jpa-service`
+
+The purpose of the service is to use JPA.
+Since it is designed to be universal, it uses H2 database,
+but each entity is treated as if it were a regular DB underneath.
+
+=== Mongo service
+`sample/sample-mongo-service`
+
+The aim of the service is to demonstrate the use of mongo database management in a simple read/write way. The service is based on the mongo module of coff:ee, more information about it can be found here: https://i-cell-mobilsoft-open-source.github.io/coffee/#common_module_coffee-module-mongodb
+
+To use the service, you first need to run the mongo docker database.
+
+== Run
+To run it, docker-compose is used,
+because you can make more serious adjustments with it than with the docker itself.
+
+Launch .Service server environment
+[source,bash]
+----
+docker-compose -f local_path/sampler/etc/docker-compose/docker-compose.local.wildfly.yml up --force-recreate
+----
+The `--force-recreate` option is good for clearing the previous docker container on startup,
+giving a fresh start to any environment startup
+
+.War deploy - Deploy
+This uses the Wildfly deploy autoscan feature,
+so we copy the war file into the scanned directory.
+This can be done from the console (not convenient) or using an ANT file (`sample/sample-*-service/build.xml`).
+The Wilfly server and its configuration are configured to run 1 service at a time.
+So the following installation "copy" script can be used, in which <PROJECT_VERSION> must be set to the current version number:
+
+Install .war file
+[source,bash]
+----
+# for sample-rest-service
+docker cp local_path/sample/sample-rest-service/target/sample-rest-service-<PROJECT_VERSION>.war bs-sample-service:/opt/jboss/wildfly/standalone/deployments/ROOT.war
+
+# for sample-jpa-service
+docker cp local_path/sample/sample-jpa-service/target/sample-jpa-service-<PROJECT_VERSION>.war bs-sample-service:/opt/jboss/wildfly/standalone/deployments/ROOT.war
+
+# for sample-mongo-service
+docker cp local_path/sample/sample-mongo-service/target/sample-mongo-service-<PROJECT_VERSION>.war bs-sample-service:/opt/jboss/wildfly/standalone/deployments/ROOT.war
+----
+
+But more conveniently with Ant 1 click from the IDE,
+for example the `sample/sample-rest-service/build.xml` ant file
+- with the target "deploy-war-docker" (default).
+This handles routes, version numbers,
+no need to remember anything, open console etc...
+
+Some services, such as `sample-mongo-service`, also require MongoDB service,
+is prepared for this in the `etc/docker-compose/docker-compose.local.mongodb.yml` docker-compose file.
+All you have to do is start it:
+
+.start MongoDB
+[source,bash]
+----
+docker-compose -f local_path/sampler/etc/docker-compose/docker-compose.local.mongodb.yml up --force-recreate
+----
+Everything else is set.
+
+== Testing
+The endpoints are not authenticated,
+you can use the SwaggerUI page.
+Unfortunately, due to the "complexity" of the API, this will not work well in XML format because of the XML namespace,
+so you can use this instead for the JSON format.
+
+.Developer tests - sr-testsuite
+`sampler/sr-testsuite`
+
+The development tests use the https://github.com/i-Cell-Mobilsoft-Open-Source/roaster[Roaster] project.
+This is a fully self-native REST that makes external calls to the deployed application.
+You can run it directly from the developer UI (junit pligun) or from maven (you have to activate the "profile" option),
+for example:
+
+[source,bash]
+----
+mvn verify -Dprofile <1>
+mvn verify -Dprofile=sandbox,local <2>
+----
+<1> default parameters
+<2> selected profiles from configuration files
